@@ -1,5 +1,5 @@
 {
-  "name": "yt_downloader_mp3",
+  "name": "yt_playlist_downloader_mp3",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
