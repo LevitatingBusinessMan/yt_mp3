@@ -1,0 +1,16 @@
+{
+  "name": "yt_downloader_mp3",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "fs": "0.0.1-security",
+    "node-id3": "^0.1.5",
+    "node-notifier": "^5.2.1",
+    "ytdl-core": "^0.20.4"
+  },
+  "author": "LevitatingBusinessMan",
+  "license": "Apache 2.0"
+}
