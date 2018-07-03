@@ -15,5 +15,5 @@ node . playlist_id directory name
 ```
 
 Tags:
-`-noimage`: Prevent the script from adding thumbnails
+`-noimage`: Prevent the script from adding thumbnails<br/>
 `-s <number>`: Define the download/write streams allowed at the same time. Increasing this can cause stability issues. Default: 15
