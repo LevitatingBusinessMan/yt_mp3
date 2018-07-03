@@ -1,14 +1,22 @@
 // example node index.js PLc1l1_YXYDH4BoWto9Mds2aaL_bn1lAG_ REINS EDM MIX
 
-let images;
-if (process.argv.includes('-noimage')) {
-    process.argv.splice(process.argv.indexOf('-noimage'), 1);
-    mages = false;
-} else images = true;
+let argv = process.argv;
 
-let playlistID = process.argv[2];
-let dir = process.argv.splice(3).join(' ');
+let images = true;
+if (argv.includes('-noimage')) {
+    argv.splice(process.argv.indexOf('-noimage'), 1);
+    mages = false;
+}
+
 let streamsAllowed = 15;
+if (argv.includes('-s')) {
+    let index = argv.indexOf('-s');
+    streamsAllowed = argv[index+1];
+    argv.splice(index, 2);
+}
+
+let playlistID = argv[2];
+let dir = argv.splice(3).join(' ');
 
 let key = require('./key.js')
 const notifier = require('node-notifier');
@@ -19,6 +27,11 @@ const ytdl = require('ytdl-core');
 const yt = new (require('./yt_wrapper.js'))(key);
 
 yt.playlistItems(playlistID).then(async r => {
+
+    if (fs.existsSync(dir)) {
+        console.log('That folder already exists.');
+        process.exit();
+    }
 
     fs.mkdirSync(dir);
 
