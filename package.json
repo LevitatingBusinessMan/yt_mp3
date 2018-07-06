@@ -6,7 +6,7 @@
   "preferGlobal": true,
   "scripts": {
     "start": "node index.js",
-    "build": "pkg . -o ./build/yt_mp3.exe"
+    "build": "pkg . -o ./build/yt_mp3.exe --public"
   },
   "bin": {
     "yt_mp3": "index.js"
@@ -17,10 +17,15 @@
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
     "node-id3": "^0.1.5",
-    "node-notifier": "^5.2.1",
     "ytdl-core": "^0.20.4"
   },
-  "keywords": ["youtube", "mp3", "youtube to mp3", "youtube playlists", "youtube songs"],
+  "keywords": [
+    "youtube",
+    "mp3",
+    "youtube to mp3",
+    "youtube playlists",
+    "youtube songs"
+  ],
   "homepage": "https://github.com/LevitatingBusinessMan/yt_mp3#readme",
   "author": "LevitatingBusinessMan",
   "license": "MIT"

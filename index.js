@@ -4,11 +4,11 @@ let argv = process.argv;
 process.stdout.write('\n');
 
 if (['-v', '--version', '--help'].includes(argv[2]) || !argv[2]) {
-    let package = require('./package.json');
+    let packageJSON = require('./package.json');
     console.dir({
-        "Name": package.name,
-        "Version": package.version,
-        "Author": package.author,
+        "Name": packageJSON.name,
+        "Version": packageJSON.version,
+        "Author": packageJSON.author.name,
         "Syntax": "yt_mp3 <playlist_id> <dir>",
         "Change key": "yt_mp3 -key <new_key>"
     });
@@ -27,7 +27,10 @@ if ('-key' == argv[2]){
 } else {
     let image = argv.includes('-noimage') ? false : true;
     let streamsAllowed = argv.includes('-s') ? argv[argv.indexOf('-s')+1] : 15;
-    if (!streamsAllowed || isNaN(streamsAllowed))  console.error('No number defined after -s');
+    if (!streamsAllowed || isNaN(streamsAllowed))  {
+        console.log('No number defined after -s');
+        process.exit(1);
+    }
 
     let args = argv;
 
@@ -35,17 +38,21 @@ if ('-key' == argv[2]){
     if (argv.includes('-noimage')) args.splice(args.indexOf('-noimage'),1);
     if (argv.includes('-s')) args.splice(args.indexOf('-s'),2);
 
-    run(args[0], args.slice(1).join(' '), image, streamsAllowed)
+    if (!args[1]) {
+        console.log('No playlistID or directory defined');
+        process.exit(1);
+    }
+
+    run(args[0], args.slice(1).join(' '), image, streamsAllowed);
 }
 
 function run(playlistID, dir, images, streamsAllowed) {
-    const notifier = require('node-notifier'),
-    axios = require('axios'),
+    const axios = require('axios'),
     path = require('path'),
     ffmpeg = require('fluent-ffmpeg'),
     NodeID3 = require('node-id3'),
     fs = require('fs'),
-    ytdl = require('ytdl-core')
+    ytdl = require('ytdl-core'),
     key = require('./key.json').key;
 
     ffmpeg.setFfmpegPath(path.join(__dirname, '/node_modules/ffmpeg-binaries/bin/ffmpeg.exe'));
