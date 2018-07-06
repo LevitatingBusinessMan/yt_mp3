@@ -27,7 +27,12 @@ module.exports = class API {
                 '&part=snippet' +
                 (pageToken ? `&pageToken=${pageToken}` : '');
 
-                let result = await axios.get(url);
+                let result = await axios.get(url)
+                .catch(({response}) => {
+                    let err = response.data.error;
+                    console.log(`Error ${err.code}: ${err.errors[0].reason}`);
+                    process.exit();
+                });
                 
                 if (first) {
                     obj = {
