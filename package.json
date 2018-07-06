@@ -1,6 +1,6 @@
 {
   "name": "yt_mp3",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "preferGlobal": true,
