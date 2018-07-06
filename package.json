@@ -1,5 +1,5 @@
 {
-  "name": "@levitatingbusinessman/yt_mp3",
+  "name": "@rein/yt_mp3",
   "version": "1.0.0",
   "description": "A node.js script that downloads songs from Youtube",
   "main": "index.js",
