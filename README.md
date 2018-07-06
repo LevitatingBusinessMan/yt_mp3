@@ -4,7 +4,7 @@ It uses the standard syntax of `author - title` to define ID3 tags.
 (requires [nodejs](https://nodejs.org))
 
 #### Installation:
-`npm install @rein/yt_mp3 -g`
+`npm install yt_mp3_downloader -g`
 
 #### Usage:
 
