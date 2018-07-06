@@ -1,9 +1,13 @@
 {
-  "name": "yt_mp3",
+  "name": "@levitatingbusinessman/yt_mp3",
   "version": "1.0.0",
-  "description": "",
+  "description": "A node.js script that downloads songs from Youtube",
   "main": "index.js",
   "preferGlobal": true,
+  "scripts": {
+    "start": "node index.js",
+    "build": "pkg . -o ./build/yt_mp3.exe"
+  },
   "bin": {
     "yt_mp3": "index.js"
   },
@@ -16,6 +20,8 @@
     "node-notifier": "^5.2.1",
     "ytdl-core": "^0.20.4"
   },
+  "keywords": ["youtube", "mp3", "youtube to mp3", "youtube playlists", "youtube songs"],
+  "homepage": "https://github.com/LevitatingBusinessMan/yt_mp3#readme",
   "author": "LevitatingBusinessMan",
   "license": "MIT"
 }
