@@ -71,18 +71,10 @@ function run(playlistID, dir, images, streamsAllowed) {
             let finished = 0;
             process.stdout.write(`${Math.round(finished/r.videos.length*100)}% - ${0}m${0}s`);
     
-            let generalInterval = setInterval(() => {
+            /* generalInterval */
+            setInterval(() => {
                 if(!videos.length && !streams){
-                    notifier.notify(
-                        {
-                            title: "YT downloader",
-                            message: `Done downloading ${r.videos.length} songs!`,
-                            icon: "./icon.png", // Absolute path (doesn't work on balloons)
-                            sound: true, // Only Notification Center or Windows Toasters
-                            wait: false // Wait with callback, until user action is taken against notification
-                        }
-                    );
-                    setTimeout(process.exit, 100);
+                    process.exit();
                 }
     
                 // add stream
@@ -118,7 +110,8 @@ function run(playlistID, dir, images, streamsAllowed) {
                 }
             }, 200);
     
-            let progressIndicator = setInterval(() => {
+            /* progressIndicator */
+            setInterval(() => {
                 let d = new Date();
                 let minutes = new Date(d - startTime).getMinutes();
                 let seconds = new Date(d - startTime).getSeconds();
