@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
+    "commander": "^2.18.0",
     "ffmpeg-binaries": "^3.2.2-3",
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
     "node-id3": "^0.1.5",
-    "ytdl-core": "^0.20.4"
+    "ytdl-core": "^0.20.4",
+    "yt-playlists": "file:./yt-playlists"
   },
   "keywords": [
     "youtube",
@@ -27,6 +29,10 @@
     "youtube songs"
   ],
   "homepage": "https://github.com/LevitatingBusinessMan/yt_mp3#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LevitatingBusinessMan/yt_mp3.git"
+  },
   "author": "LevitatingBusinessMan",
   "license": "MIT"
 }
