@@ -2,13 +2,14 @@
 //test with deleted video
 //Errors
 //Localizations?
+//Double songs with playlists under 50 songs
 
 const https = require('https'),
 url = require('url');
 
 module.exports = KEY => {
     var KEY = KEY;
-    return {getVideos, getPlaylist};
+    return {getVideos, getPlaylistInfo};
 
     async function getVideos(ID) {
 
@@ -25,7 +26,7 @@ module.exports = KEY => {
         };
 
         class Listing extends Array {
-            constructor(nextPageToken, items) {
+            constructor(items, nextPageToken) {
                 //Set best thumbnail
                 items.map(v => v.snippet.thumbnails.best = bestThumbnail(v.snippet.thumbnails));
 
@@ -85,7 +86,7 @@ module.exports = KEY => {
                             thumbnail: bestThumbnail(data.items[0].snippet.thumbnails),
                             length: data.pageInfo.totalResults,
                             etag: data.etag,
-                            items: new Listing(data.nextPageToken, data.items)
+                            items: new Listing(data.items, data.nextPageToken)
                         })
                 })
             })

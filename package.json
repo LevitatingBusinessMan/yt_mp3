@@ -18,8 +18,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
     "node-id3": "^0.1.5",
-    "ytdl-core": "^0.20.4",
-    "yt-playlists": "file:./yt-playlists"
+    "ytdl-core": "^0.20.4"
   },
   "keywords": [
     "youtube",

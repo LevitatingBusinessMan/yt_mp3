@@ -1,7 +1,10 @@
 //TODO:
 //Take a look at file and folder naming
+//The console log here should maybe be an event manager for API use. The bin file will log to console
+
 
 const ffmpeg = require("fluent-ffmpeg"),
+    axios = require("axios")
     NodeID3 = require("node-id3"),
     path = require("path"),
     fs = require("fs"),
@@ -9,7 +12,8 @@ const ffmpeg = require("fluent-ffmpeg"),
     {getVideos, getPlaylistInfo} = require(path.join(__dirname, "yt-playlists.js"))("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
     //getPlayList = require("yt-playlists")("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
 
-module.exports = async (ID, streams, ID3, album, image) => {
+
+module.exports = async (ID, streamCount, ID3, album, image) => {
     ffmpeg.setFfmpegPath(path.join(__dirname, "/node_modules/ffmpeg-binaries/bin/ffmpeg.exe"));
 
     //Retrieve playlists videos
@@ -17,16 +21,66 @@ module.exports = async (ID, streams, ID3, album, image) => {
     await PL.items.fetchAll();
 
     //If no album name is set, use the playlists title
-    const dir = album ? album : await getPlaylistInfo(ID).snippet.title;
+    const dir = album ? album : (await getPlaylistInfo(ID)).snippet.title;
 
     //Create folder
     if (!fs.existsSync(dir))
         fs.mkdirSync(dir);
+    
+    let streams = 0;
+    let amount = PL.items.length;
+    let finished = 0;
+    function Stream(video) {
+        streams++;
+        const title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
+        const artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
 
-    class Stream {
-        constructor(video) {
-            this.title = video.title.split(" - ")[1] ? video.title.split(" - ")[1] : video.title;
-            this.artist = video.title.split(" - ")[1] ? video.title.split(" - ")[0] : "uknown";
+        let image;
+        axios.get(video.snippet.thumbnails.best.url , {
+            responseType: "arraybuffer"
+        }).then(results => {image = results.data;})
+        //Should be a catch here
+
+        const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+
+        const ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + video.snippet.resourceId.videoId, { filter: "audioonly" })
+            .on("error", error)
+            .on("finish", finish);
+
+        const stream = ffmpeg(ytdl_stream)
+                .on("error", error)
+                .toFormat("mp3")
+                .pipe(fs.createWriteStream(path_).on("error", error));
+        
+        function error(e) {
+            if (e.message = "Output stream closed")
+                return;
+            console.error(`Error at: ${video.snippet.title}\n${e}`);
+            streams--;
+            finished++;
+        }
+
+        function finish() {
+            streams--;
+            finished++;
+            if (ID3)
+            NodeID3.write({
+                title,
+                artist,
+                image,
+                album: dir,
+                trackNumber: video.snippet.position
+            }, path_);
+            console.log(`${title} - ${Math.floor((finished/amount)*100)}%`)
         }
     }
+
+    let videos = new Array(...PL.items);
+    setInterval(() => {
+        if (streams < streamCount)
+            Stream(videos.splice(0,1)[0])
+    }, 100)
+
+    console.log(`Started downloading ${videos.length} songs`);
+
 };
