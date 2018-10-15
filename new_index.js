@@ -30,10 +30,12 @@ module.exports = async (ID, streamCount, ID3, album, image) => {
     let streams = 0;
     let amount = PL.items.length;
     let finished = 0;
+    const failed = [];
     function Stream(video) {
         streams++;
         const title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
         const artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
+        console.log(title)
 
         let image;
         axios.get(video.snippet.thumbnails.best.url , {
@@ -56,6 +58,7 @@ module.exports = async (ID, streamCount, ID3, album, image) => {
             if (e.message = "Output stream closed")
                 return;
             console.error(`Error at: ${video.snippet.title}\n${e}`);
+            failed.push(video.snippet.title);
             streams--;
             finished++;
         }
@@ -69,7 +72,7 @@ module.exports = async (ID, streamCount, ID3, album, image) => {
                 artist,
                 image,
                 album: dir,
-                trackNumber: video.snippet.position
+                trackNumber: video.snippet.position +1
             }, path_);
             console.log(`${title} - ${Math.floor((finished/amount)*100)}%`)
         }
@@ -77,8 +80,19 @@ module.exports = async (ID, streamCount, ID3, album, image) => {
 
     let videos = new Array(...PL.items);
     setInterval(() => {
-        if (streams < streamCount)
+        if (streams < streamCount && videos.length)
             Stream(videos.splice(0,1)[0])
+        
+        //Done
+        else if(!videos.length) {
+            if (failed.length) {
+                console.log("\nFinished download. Failed songs:");
+                failed.forEach(console.log);
+            } else {
+                console.log("\n Downloaded all songs succesfully");
+                process.exit();
+            }
+        }
     }, 100)
 
     console.log(`Started downloading ${videos.length} songs`);
