@@ -33,9 +33,10 @@ module.exports = KEY => {
             }
         
             fetchMore() {
-                request.query.pageToken	= this.nextPageToken;
-
                 return new Promise((resolve, reject) => {
+                    if (!this.nextPageToken)
+                        return resolve();
+                    request.query.pageToken	= this.nextPageToken;
                     https.get(url.format(request), res => {
                         let data = '';
                         res.on('data', d => data += d.toString())
@@ -68,6 +69,8 @@ module.exports = KEY => {
                 res.on('data', d => data += d.toString())
                 res.on('end', () => {
                     data = JSON.parse(data);
+                    if (!data.items)
+                        return reject(data)
                     if (!data.items.length)
                         resolve({
                             owner: undefined,

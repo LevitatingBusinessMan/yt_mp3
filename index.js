@@ -17,13 +17,16 @@ const ffmpeg = require("fluent-ffmpeg"),
  * @param {integer} streamCount - Number of streams allowed
  * @param {boolean} ID3 - If ID3 tags should be applied to mp3 files
  * @param {string} album - Name of album and directory
- * @param {boolean} image - If an image should be included in the ID3 tags
+ * @param {boolean} imageTag - If an image should be included in the ID3 tags
  */
-module.exports = async (ID, streamCount, ID3, album, image) => {
+module.exports = async (ID, streamCount, ID3, album, imageTag) => {
     ffmpeg.setFfmpegPath(path.join(__dirname, "/node_modules/ffmpeg-binaries/bin/ffmpeg.exe"));
 
     //Retrieve playlists videos
-    const PL = await getVideos(ID);
+    const PL = await getVideos(ID).catch(() => {
+        console.error("Error retrieving playlist data");
+        process.exit()
+    });
     await PL.items.fetchAll();
 
     //If no album name is set, use the playlists title
@@ -42,11 +45,13 @@ module.exports = async (ID, streamCount, ID3, album, image) => {
         const title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
         const artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
 
-        let image;
-        axios.get(video.snippet.thumbnails.best.url , {
-            responseType: "arraybuffer"
-        }).then(results => {image = results.data;})
-        //Should be a catch here
+        if (imageTag) {
+            var image;
+            axios.get(video.snippet.thumbnails.best.url , {
+                responseType: "arraybuffer"
+            }).then(results => {image = results.data;})
+            //Should be a catch here
+        }
 
         const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
@@ -73,8 +78,8 @@ module.exports = async (ID, streamCount, ID3, album, image) => {
                 NodeID3.write({
                     title,
                     artist,
-                    image,
                     album: dir,
+                    image : imageTag ? image : undefined,
                     trackNumber: video.snippet.position +1
                 }, path_, finish);
             else finish();
