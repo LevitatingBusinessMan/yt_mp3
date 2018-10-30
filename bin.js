@@ -17,7 +17,7 @@ program
     .parse(process.argv);
 
 const path = require("path");
-require(path.join(__dirname, "./new_index.js"))(ID, program.streams ? program.streams : 15, program.ID3, program.album, program.image);
+require(path.join(__dirname, "./index.js"))(ID, program.streams ? program.streams : 15, program.ID3, program.album, program.image);
 
 /* console.log("ID: " + ID);
 console.log("streams: " + program.streams);

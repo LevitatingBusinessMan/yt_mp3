@@ -1,8 +1,6 @@
 //TODO: 
 //test with deleted video
 //Errors
-//Localizations?
-//Double songs with playlists under 50 songs
 
 const https = require('https'),
 url = require('url');
