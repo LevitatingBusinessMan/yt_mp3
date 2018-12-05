@@ -17,13 +17,13 @@ program
     })
     .parse(process.argv);
 
-console.log("ID: " + ID);
+/* console.log("ID: " + ID);
 console.log("streams: " + program.streams);
 console.log("ID3: " + program.ID3);
 console.log("album: " + program.album);
 console.log("image: " + program.image);
 console.log("overwrite: " + program.overwrite);
-console.log("\n\n");
+console.log("\n\n"); */
 
 const path = require("path");
 require(path.join(__dirname, "./index.js"))(ID, program.streams ? program.streams : 15, program.ID3, program.album, program.image, program.overwrite);

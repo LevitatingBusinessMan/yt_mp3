@@ -23,6 +23,9 @@ const ffmpeg = require("fluent-ffmpeg"),
 module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     ffmpeg.setFfmpegPath(path.join(__dirname, "/node_modules/ffmpeg-binaries/bin/ffmpeg.exe"));
 
+    if (!ID)
+        return console.log("No playlist ID")
+
     //Retrieve playlists videos
     const PL = await getVideos(ID).catch(() => {
         console.error("Error retrieving playlist data");
