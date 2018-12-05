@@ -18,8 +18,9 @@ const ffmpeg = require("fluent-ffmpeg"),
  * @param {boolean} ID3 - If ID3 tags should be applied to mp3 files
  * @param {string} album - Name of album and directory
  * @param {boolean} imageTag - If an image should be included in the ID3 tags
+ * @param {boolean} overwrite - If existing files should be overwritten
  */
-module.exports = async (ID, streamCount, ID3, album, imageTag) => {
+module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     ffmpeg.setFfmpegPath(path.join(__dirname, "/node_modules/ffmpeg-binaries/bin/ffmpeg.exe"));
 
     //Retrieve playlists videos
@@ -56,18 +57,27 @@ module.exports = async (ID, streamCount, ID3, album, imageTag) => {
         const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
         const ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + video.snippet.resourceId.videoId, { filter: "audioonly" })
-            .on("error", error)
+            .on("error", e => error(e, "ytdl"))
             .on("finish", writeID3);
 
         const stream = ffmpeg(ytdl_stream)
-                .on("error", error)
+                .on("error", e => error(e, "ffmpeg"))
                 .toFormat("mp3")
-                .pipe(fs.createWriteStream(path_).on("error", error));
+                .pipe(fs.createWriteStream(path_, {flags: !overwrite ? "wx" : "w"}).on("error", e => error(e, "fs")));
         
-        function error(e) {
-            if (e.message = "Output stream closed")
+        function error(e, source) {
+            /*When a song has to get overwritten but overwrite is turned off,
+            the EEXIST error gets supressed*/
+
+            //Error from fs
+            if (e.code == "EEXIST")
+                return finish();
+
+            //Error from ffmpeg
+            if (e.message.includes("EEXIST"))
                 return;
-            console.error(`Error at: ${video.snippet.title}\n${e}`);
+            
+            console.error(`(${source}) Error at: ${video.snippet.title}\n${e}`);
             failed.push(video.snippet.title);
             streams--;
             finished++;
