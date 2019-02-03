@@ -1,6 +1,7 @@
 //TODO:
 //Take a look at file and folder naming
 //The console log here should maybe be an event manager for API use. The bin file will log to console
+//Do stream count benchmarks
 
 
 const ffmpeg = require("fluent-ffmpeg"),
@@ -39,92 +40,117 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     //Create folder
     if (!fs.existsSync(dir))
         fs.mkdirSync(dir);
-    
-    let streams = 0;
-    let amount = PL.items.length;
+
+    let total = PL.items.length;
+    let failed = new Array();
+    let videos = new Array(...PL.items);
+    let active = 0;
     let finished = 0;
-    const failed = [];
-    function Stream(video) {
-        streams++;
-        const title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
-        const artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
 
-        if (imageTag) {
-            var image;
-            axios.get(video.snippet.thumbnails.best.url , {
-                responseType: "arraybuffer"
-            }).then(results => {image = results.data;})
-            //Should be a catch here
-        }
-
-        const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
-
-        const ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + video.snippet.resourceId.videoId, { filter: "audioonly" })
-            .on("error", e => error(e, "ytdl"))
-            .on("finish", writeID3);
-
-        const stream = ffmpeg(ytdl_stream)
-                .on("error", e => error(e, "ffmpeg"))
-                .toFormat("mp3")
-                .pipe(fs.createWriteStream(path_, {flags: !overwrite ? "wx" : "w"}).on("error", e => error(e, "fs")));
-        
-        function error(e, source) {
-            /*When a song has to get overwritten but overwrite is turned off,
-            the EEXIST error gets supressed*/
-
-            //Error from fs
-            if (e.code == "EEXIST")
-                return finish();
-
-            //Error from ffmpeg
-            if (e.message.includes("EEXIST"))
-                return;
+    /**
+     * @param {object} video - Video element from Youtube's API
+     */
+    class Stream {
+        constructor(video) {
+            this.state = "unstarted";
+            this.video = video;
+            this.title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
+            this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
+            this.image = undefined;
+            this.path = path.join(dir, this.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             
-            console.error(`(${source}) Error at: ${video.snippet.title}\n${e}`);
-            failed.push(video.snippet.title);
-            streams--;
-            finished++;
+            if (imageTag) {
+                let image;
+                axios.get(video.snippet.thumbnails.best.url , {
+                    responseType: "arraybuffer"
+                }).then(results => {image = results.data;})
+                .catch(e => this.error(e, "image-buffer-request"));
+                if (image)
+                    this.image = image;
+            }
         }
 
-        function writeID3() {
+        Start() {
+            active++;
+
+            if (this.state !== "unstarted")
+                return console.error(`Streams already started! (${this.title})`)
+
+            this.ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + this.video.snippet.resourceId.videoId, { filter: "audioonly", quality: "highestaudio" })
+                .on("error", e => this.Error(e, "ytdl"))
+
+            this.write_stream = fs.createWriteStream(this.path, {flags: !overwrite ? "wx" : "w"})
+                .on("error", e => this.Error(e, "fs"));
+
+            this.ffmpeg_stream = ffmpeg(this.ytdl_stream)
+                .on("error", e => this.Error(e, "ffmpeg"))
+                .on("end", () => this.WriteID3())
+                .toFormat("mp3")
+                .pipe(this.write_stream);
+
+            this.state = "busy";
+        }
+
+        WriteID3() {
+            this.write_stream.end();
+
             if (ID3)
                 NodeID3.write({
-                    title,
-                    artist,
-                    album: dir,
-                    image : imageTag ? image : undefined,
-                    trackNumber: video.snippet.position +1
-                }, path_, finish);
-            else finish();
+                    title: this.title,
+                    artist: this.artist,
+                    image : this.image,
+                    trackNumber: this.video.snippet.position +1,
+                    album: dir
+                }, this.path, () => this.Finish());
+            else this.Finish();
         }
-        
-        function finish(err) {
-            if (err)
-                return error(e);
-            
-            streams--;
+
+        Finish() {
+            active--;
             finished++;
-            console.log(`${title} - ${Math.floor((finished/amount)*100)}%`)
+
+            this.state = "done";
+            console.log(`${this.title} - ${Math.floor((finished/total)*100)}%`);
+        }
+
+        Error(e, source) {
+            active--;
+            finished++;
+
+            failed.push(this.title)
+
+            this.state = "error'd"
+            this.write_stream.end();
+            this.ffmpeg_stream.end();
+            this.ytdl_stream.end();
+
+            console.error(`(${source}) Error at: ${this.title}\n${e}`);
         }
     }
 
-    let videos = new Array(...PL.items);
+
     setInterval(() => {
-        if (streams < streamCount && videos.length)
-            Stream(videos.splice(0,1)[0])
-        
-        //Done
-        else if(!streams && !videos.length) {
-            if (failed.length) {
-                console.log("\nFinished download. Failed songs:");
-                failed.forEach(console.log);
-                process.exit();
+
+        if (active < streamCount)  {
+           
+            if (!videos.length && active < 0){
+                if (failed.length) {
+                    console.log("\nFinished download. Failed songs:");
+                    console.log(failed);
+                    process.exit();
+                } else {
+                    console.log("\n Downloaded all songs succesfully");
+                    process.exit();
+                }
             } else {
-                console.log("\n Downloaded all songs succesfully");
-                process.exit();
+
+                let Stream_ = new Stream(videos.splice(0,1)[0]);
+                Stream_.Start();
+
             }
         }
-    }, 100)
-    
-    console.log(`Started downloading ${videos.length} songs`);
+    }, 1000)
+
+    console.log(`Started downloading ${total} songs`);
+
 };

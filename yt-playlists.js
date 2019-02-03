@@ -1,6 +1,6 @@
 //TODO: 
-//test with deleted video
-//Errors
+//Test with deleted videos
+//Return new arrays instead of editing the current one
 
 const https = require('https'),
 url = require('url');
