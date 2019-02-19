@@ -7,7 +7,7 @@ program
     .version(require("./package.json").version, "-v, --version")
     .usage("[options] <ID>")
     .arguments("<ID>")
-    .option("-s, --streams <amount>","amount of streams", /\d*/)
+    .option("-s, --streams <amount>","amount of download streams", /\d*/)
     .option("-a, --album <name>","specify album name (default is playlist name)")
     .option("--no-image","disable ablum covers (thumbnails)")
     .option("--no-ID3","disable ID3 tags")

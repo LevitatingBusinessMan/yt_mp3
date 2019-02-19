@@ -1,7 +1,8 @@
 //TODO:
 //Take a look at file and folder naming
 //The console log here should maybe be an event manager for API use. The bin file will log to console
-//Do stream count benchmarks
+//Say how long shit took
+//Make no-overwrite work again
 
 
 const ffmpeg = require("fluent-ffmpeg"),
@@ -133,7 +134,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
 
         if (active < streamCount)  {
            
-            if (!videos.length && active < 0){
+            if (!videos.length && active < 1){
                 if (failed.length) {
                     console.log("\nFinished download. Failed songs:");
                     console.log(failed);
@@ -142,7 +143,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
                     console.log("\n Downloaded all songs succesfully");
                     process.exit();
                 }
-            } else {
+            } else if (videos.length) {
 
                 let Stream_ = new Stream(videos.splice(0,1)[0]);
                 Stream_.Start();

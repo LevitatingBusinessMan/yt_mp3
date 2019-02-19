@@ -1,7 +1,7 @@
 {
   "name": "yt_mp3_downloader",
   "version": "2.0.0",
-  "description": "A node.js script that downloads songs from Youtube",
+  "description": "A node.js script that downloads Youtube playlists",
   "main": "index.js",
   "preferGlobal": true,
   "scripts": {
@@ -15,7 +15,6 @@
     "commander": "^2.18.0",
     "ffmpeg-binaries": "^3.2.2-3",
     "fluent-ffmpeg": "^2.1.2",
-    "fs": "0.0.1-security",
     "node-id3": "^0.1.5",
     "ytdl-core": "^0.20.4"
   },
