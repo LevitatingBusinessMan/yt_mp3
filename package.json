@@ -11,12 +11,14 @@
     "yt_mp3": "bin.js"
   },
   "dependencies": {
-    "axios": "^0.18.0",
-    "commander": "^2.18.0",
+    "axios": "^0.18.1",
+    "commander": "^2.20.0",
     "ffmpeg-binaries": "^3.2.2-3",
     "fluent-ffmpeg": "^2.1.2",
-    "node-id3": "^0.1.5",
-    "ytdl-core": "^0.20.4"
+    "lodash": "^4.17.15",
+    "node-id3": "^0.1.7",
+    "reins_progress_bar": "github:LevitatingBusinessMan/progress_bar",
+    "ytdl-core": "^0.29.2"
   },
   "keywords": [
     "youtube",
