@@ -26,4 +26,4 @@ console.log("overwrite: " + program.overwrite);
 console.log("\n\n"); */
 
 const path = require("path");
-require(path.join(__dirname, "./index.js"))(ID, program.streams ? program.streams : 15, program.ID3, program.album, program.image, program.overwrite);
+require(path.join(__dirname, "./index.js"))(ID, program.streams ? parseInt(program.streams) : 15, program.ID3, program.album, program.image, program.overwrite);

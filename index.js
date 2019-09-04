@@ -1,16 +1,10 @@
-//TODO:
-//Take a look at file and folder naming
-//The console log here should maybe be an event manager for API use. The bin file will log to console
-//Say how long shit took
-//Make no-overwrite work again
-
-
 const ffmpeg = require("fluent-ffmpeg"),
     axios = require("axios")
     NodeID3 = require("node-id3"),
     path = require("path"),
     fs = require("fs"),
     ytdl = require("ytdl-core"),
+    ProgressBar = require("reins_progress_bar"),
     {getVideos, getPlaylistInfo} = require(path.join(__dirname, "yt-playlists.js"))("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
 
 /**
@@ -42,42 +36,43 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     if (!fs.existsSync(dir))
         fs.mkdirSync(dir);
 
-    let total = PL.items.length;
+    const total = PL.items.length;
     let failed = new Array();
-    let videos = new Array(...PL.items);
-    let active = 0;
+    const videos = new Array(...PL.items);
     let finished = 0;
+    const activeStreams = new Array(parseInt(streamCount)).fill(undefined);
+
+    require("draftlog").into(console)
+    const draftLogs = new Array(streamCount);
 
     /**
      * @param {object} video - Video element from Youtube's API
      */
     class Stream {
-        constructor(video) {
-            this.state = "unstarted";
+        constructor(video, index) {
+            this.started = false;
+            this.index = index;
             this.video = video;
             this.title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
+            this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
             this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
             this.image = undefined;
             this.path = path.join(dir, this.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.size = undefined;
+            this.PB = undefined;
             
             if (imageTag) {
-                let image;
                 axios.get(video.snippet.thumbnails.best.url , {
                     responseType: "arraybuffer"
-                }).then(results => {image = results.data;})
+                })
+                .then(results => this.image = results.data)
                 .catch(e => this.error(e, "image-buffer-request"));
-                if (image)
-                    this.image = image;
             }
         }
 
         Start() {
-            active++;
-
-            if (this.state !== "unstarted")
-                return console.error(`Streams already started! (${this.title})`)
-
             this.ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + this.video.snippet.resourceId.videoId, { filter: "audioonly", quality: "highestaudio" })
+                .on("progress", this.progressHandler.bind(this))
                 .on("error", e => this.Error(e, "ytdl"))
 
             this.write_stream = fs.createWriteStream(this.path, {flags: !overwrite ? "wx" : "w"})
@@ -88,18 +83,29 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
                 .on("end", () => this.WriteID3())
                 .toFormat("mp3")
                 .pipe(this.write_stream);
+        }
 
-            this.state = "busy";
+        progressHandler(chunkLength, downloaded, total) {
+            if (!this.started) {
+                this.PB = new ProgressBar(total);
+                this.started = true;
+            }
+
+            this.PB.done = downloaded;
+            if(!draftLogs[this.index])
+                draftLogs[this.index] = console.draft(`${this.title_ + " ".repeat(30-this.title_.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
+            else
+                draftLogs[this.index](`${this.title_ + " ".repeat(30-this.title_.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
         }
 
         WriteID3() {
             this.write_stream.end();
-
+            
             if (ID3)
                 NodeID3.write({
                     title: this.title,
                     artist: this.artist,
-                    image : this.image,
+                    image: this.image,
                     trackNumber: this.video.snippet.position +1,
                     album: dir
                 }, this.path, () => this.Finish());
@@ -107,34 +113,37 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
         }
 
         Finish() {
-            active--;
             finished++;
+            updateLog();
 
-            this.state = "done";
-            console.log(`${this.title} - ${Math.floor((finished/total)*100)}%`);
+            //Delete itself
+            activeStreams[this.index] = undefined;
+            delete this;
         }
 
         Error(e, source) {
-            active--;
             finished++;
+            updateLog();
 
             failed.push(this.title)
 
-            this.state = "error'd"
             this.write_stream.end();
             this.ffmpeg_stream.end();
             this.ytdl_stream.end();
 
             console.error(`(${source}) Error at: ${this.title}\n${e}`);
+
+            //Delete itself
+            activeStreams[this.index] = undefined;
+            delete this;
         }
     }
-
-
-    setInterval(() => {
-
-        if (active < streamCount)  {
+    
+    function streamCheck() {
+        if (activeStreams.filter(element => element).length < streamCount)  {
            
-            if (!videos.length && active < 1){
+            //Done downloading
+            if (!videos.length && activeStreams.length < 1){
                 if (failed.length) {
                     console.log("\nFinished download. Failed songs:");
                     console.log(failed);
@@ -143,15 +152,30 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
                     console.log("\n Downloaded all songs succesfully");
                     process.exit();
                 }
+
+            //New download stream
             } else if (videos.length) {
 
-                let Stream_ = new Stream(videos.splice(0,1)[0]);
+                let index = activeStreams.indexOf(undefined)
+                let Stream_ = new Stream(videos.splice(0,1)[0], index);
+                activeStreams[index] = Stream_;
                 Stream_.Start();
 
             }
         }
-    }, 1000)
+    }
 
-    console.log(`Started downloading ${total} songs`);
+    streamCheck();
+    setInterval(streamCheck, 1000);
+
+    //Progress bars
+    console.log(`Started downloading ${total} songs with ${streamCount} parallel streams`);
+    const mainBar = new ProgressBar(total);
+    const updateMain = console.draft("\033[1;32m"+ `Total ${" ".repeat(30-"Total".length)}${mainBar.display()} ${mainBar.percentage()}%` + "\033[0m");
+
+    function updateLog() {
+        mainBar.done = finished;
+        updateMain("\033[1;32m"+ `Total ${" ".repeat(30-"Total".length)}${mainBar.display()} ${mainBar.percentage()}%` + "\033[0m");
+    }
 
 };

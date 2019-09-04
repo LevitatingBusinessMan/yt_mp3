@@ -13,10 +13,11 @@
   "dependencies": {
     "axios": "^0.18.1",
     "commander": "^2.20.0",
+    "draftlog": "^1.0.12",
     "ffmpeg-binaries": "^3.2.2-3",
     "fluent-ffmpeg": "^2.1.2",
     "lodash": "^4.17.15",
-    "node-id3": "^0.1.7",
+    "node-id3": "^0.1.11",
     "reins_progress_bar": "github:LevitatingBusinessMan/progress_bar",
     "ytdl-core": "^0.29.2"
   },
