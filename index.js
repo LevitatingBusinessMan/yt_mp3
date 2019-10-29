@@ -1,11 +1,22 @@
 const ffmpeg = require("fluent-ffmpeg"),
+    ffmpeg_bin = require('ffmpeg-static');
     axios = require("axios")
     NodeID3 = require("node-id3"),
     path = require("path"),
     fs = require("fs"),
     ytdl = require("ytdl-core"),
     ProgressBar = require("reins_progress_bar"),
+    os = process.platform,
     {getVideos, getPlaylistInfo} = require(path.join(__dirname, "yt-playlists.js"))("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
+
+//Logging errors
+if (os == "linux") {
+    const err_wstream = fs.createWriteStream("/var/tmp/yt_mp3.stderr", {flags: "w"});
+    console.error = (data) => {
+        process.stderr.write(data + "\n");
+        err_wstream.write(data + "\n");
+    }
+}
 
 /**
  * 
@@ -17,7 +28,7 @@ const ffmpeg = require("fluent-ffmpeg"),
  * @param {boolean} overwrite - If existing files should be overwritten
  */
 module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
-    ffmpeg.setFfmpegPath(path.join(__dirname, "/node_modules/ffmpeg-binaries/bin/ffmpeg.exe"));
+    ffmpeg.setFfmpegPath(ffmpeg_bin.path);
 
     if (!ID)
         return console.log("No playlist ID")
@@ -73,9 +84,9 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
         Start() {
             this.ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + this.video.snippet.resourceId.videoId, { filter: "audioonly", quality: "highestaudio" })
                 .on("progress", this.progressHandler.bind(this))
-                .on("error", e => this.Error(e, "ytdl"))
+                .on("error", e => this.Error(e, "ytdl"));
 
-            this.write_stream = fs.createWriteStream(this.path, {flags: !overwrite ? "wx" : "w"})
+            this.write_stream = fs.createWriteStream(this.path, {flags: "w"})
                 .on("error", e => this.Error(e, "fs"));
 
             this.ffmpeg_stream = ffmpeg(this.ytdl_stream)
@@ -83,6 +94,9 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
                 .on("end", () => this.WriteID3())
                 .toFormat("mp3")
                 .pipe(this.write_stream);
+            
+            //Initiate progress bar
+            this.progressHandler(0, 0, 100);
         }
 
         progressHandler(chunkLength, downloaded, total) {
@@ -91,7 +105,11 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
                 this.started = true;
             }
 
+            //Update to actual total
+            this.PB.total = total;
+
             this.PB.done = downloaded;
+            
             if(!draftLogs[this.index])
                 draftLogs[this.index] = console.draft(`${this.title_ + " ".repeat(30-this.title_.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
             else
@@ -127,11 +145,17 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
 
             failed.push(this.title)
 
-            this.write_stream.end();
-            this.ffmpeg_stream.end();
-            this.ytdl_stream.end();
+            try {
+                this.write_stream.end();
+                this.ffmpeg_stream.end();
+                this.ytdl_stream.end();
+            } catch (err) {
+                
+            }
 
             console.error(`(${source}) Error at: ${this.title}\n${e}`);
+            if (os == "linux")
+            console.log("Error logs at: /var/tmp/yt_mp3.stderr")
 
             //Delete itself
             activeStreams[this.index] = undefined;
@@ -139,9 +163,20 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
         }
     }
     
-    function streamCheck() {
-        if (activeStreams.filter(element => element).length < streamCount)  {
-           
+    //Progress bars
+    console.log(`Started downloading ${total} songs with ${streamCount} parallel streams`);
+    const mainBar = new ProgressBar(total);
+    const updateMain = console.draft("\033[1;32m"+ `Total ${" ".repeat(30-"Total".length)}${mainBar.display()} ${mainBar.percentage()}%` + "\033[0m");
+
+    function updateLog() {
+        mainBar.done = finished;
+        updateMain("\033[1;32m"+ `Total ${" ".repeat(30-"Total".length)}${mainBar.display()} ${mainBar.percentage()}%` + "\033[0m");
+    }
+
+    function checkStreams() {
+        
+        //Count active streams filtering out undefined elements
+        if (activeStreams.filter(element => element).length < streamCount) {
             //Done downloading
             if (!videos.length && activeStreams.length < 1){
                 if (failed.length) {
@@ -156,26 +191,35 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
             //New download stream
             } else if (videos.length) {
 
+                const video = videos.shift();
+
+                //Check if file exists
+                if (!overwrite) {
+                    const title =
+                    video.snippet.title.split(" - ")[1]
+                    ? video.snippet.title.split(" - ")[1]
+                    : video.snippet.title;
+
+                    const path_ = 
+                    path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+
+                    //Remove video from list
+                    if (fs.existsSync(path_))
+                        return;
+
+                }
+
                 let index = activeStreams.indexOf(undefined)
-                let Stream_ = new Stream(videos.splice(0,1)[0], index);
+                let Stream_ = new Stream(video, index);
                 activeStreams[index] = Stream_;
                 Stream_.Start();
 
             }
         }
+
     }
 
-    streamCheck();
-    setInterval(streamCheck, 1000);
-
-    //Progress bars
-    console.log(`Started downloading ${total} songs with ${streamCount} parallel streams`);
-    const mainBar = new ProgressBar(total);
-    const updateMain = console.draft("\033[1;32m"+ `Total ${" ".repeat(30-"Total".length)}${mainBar.display()} ${mainBar.percentage()}%` + "\033[0m");
-
-    function updateLog() {
-        mainBar.done = finished;
-        updateMain("\033[1;32m"+ `Total ${" ".repeat(30-"Total".length)}${mainBar.display()} ${mainBar.percentage()}%` + "\033[0m");
-    }
+    checkStreams();
+    setInterval(checkStreams, 100)
 
 };
