@@ -17,9 +17,9 @@
     "ffmpeg-static": "^2.7.0",
     "fluent-ffmpeg": "^2.1.2",
     "lodash": "^4.17.15",
-    "node-id3": "^0.1.11",
+    "node-id3": "^0.1.13",
     "reins_progress_bar": "github:LevitatingBusinessMan/progress_bar",
-    "ytdl-core": "^0.29.2"
+    "ytdl-core": "^1.0.6"
   },
   "keywords": [
     "youtube",

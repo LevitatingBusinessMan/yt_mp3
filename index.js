@@ -9,14 +9,6 @@ const ffmpeg = require("fluent-ffmpeg"),
     os = process.platform,
     {getVideos, getPlaylistInfo} = require(path.join(__dirname, "yt-playlists.js"))("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
 
-//Logging errors
-if (os == "linux") {
-    const err_wstream = fs.createWriteStream("/var/tmp/yt_mp3.stderr", {flags: "w"});
-    console.error = (data) => {
-        process.stderr.write(data + "\n");
-        err_wstream.write(data + "\n");
-    }
-}
 
 /**
  * 
@@ -28,6 +20,24 @@ if (os == "linux") {
  * @param {boolean} overwrite - If existing files should be overwritten
  */
 module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
+
+    //Logging errors
+    if (os == "linux") {
+        //let errorlines = 0
+        const err_wstream = fs.createWriteStream("/var/tmp/yt_mp3.stderr", {flags: "w"});
+        console.error = (data) => {
+            //process.stderr.moveCursor(0, streamCount+2 + errorlines)
+            
+            process.stderr.write(data + "\n");
+            err_wstream.write(data + "\n");
+
+            //Count lines that have been printed (assuming there's no wrap, wrap fucks this whole thing up)
+            //errorlines = errorlines + (data.match(/\n/g)||[]).length + 1
+
+            //process.stderr.moveCursor(0, -(streamCount+2) - errorlines)
+        }
+    }
+
     ffmpeg.setFfmpegPath(ffmpeg_bin.path);
 
     if (!ID)
