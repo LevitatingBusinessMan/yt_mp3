@@ -7,7 +7,7 @@ const ffmpeg = require("fluent-ffmpeg"),
     ytdl = require("ytdl-core"),
     ProgressBar = require("reins_progress_bar"),
     os = process.platform,
-    {getVideos, getPlaylistInfo} = require(path.join(__dirname, "yt-playlists.js"))("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
+    {getVideos, getPlaylistInfo} = require("yt-playlists")("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
 
 
 /**
@@ -59,9 +59,9 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
 
     const total = PL.items.length;
     let failed = new Array();
-    const videos = new Array(...PL.items);
+    const videos = PL.items;
     let finished = 0;
-    const activeStreams = new Array(parseInt(streamCount)).fill(undefined);
+    const streams = new Array(parseInt(streamCount)).fill(undefined);
 
     require("draftlog").into(console)
     const draftLogs = new Array(streamCount);
@@ -145,7 +145,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
             updateLog();
 
             //Delete itself
-            activeStreams[this.index] = undefined;
+            streams[this.index] = undefined;
             delete this;
         }
 
@@ -168,7 +168,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
             console.log("Error logs at: /var/tmp/yt_mp3.stderr")
 
             //Delete itself
-            activeStreams[this.index] = undefined;
+            streams[this.index] = undefined;
             delete this;
         }
     }
@@ -185,46 +185,48 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
 
     function checkStreams() {
         
+        ActiveStreamsCount = streams.filter(element => element).length;
+
+        if (!videos.length && ActiveStreamsCount < 1){
+            if (failed.length) {
+                console.log("\nFinished download. Failed songs:");
+                console.log(failed);
+                process.exit(1);
+            } else {
+                console.log("\n Downloaded all songs succesfully");
+                process.exit(0);
+            }
+
+        }
+
         //Count active streams filtering out undefined elements
-        if (activeStreams.filter(element => element).length < streamCount) {
-            //Done downloading
-            if (!videos.length && activeStreams.length < 1){
-                if (failed.length) {
-                    console.log("\nFinished download. Failed songs:");
-                    console.log(failed);
-                    process.exit();
-                } else {
-                    console.log("\n Downloaded all songs succesfully");
-                    process.exit();
-                }
+        if (videos.length && ActiveStreamsCount < streamCount) {
 
-            //New download stream
-            } else if (videos.length) {
+            const video = videos.shift();
 
-                const video = videos.shift();
-
-                //Check if file exists
-                if (!overwrite) {
-                    const title =
+            //Check if file exists
+            if (!overwrite) {
+                const title =
                     video.snippet.title.split(" - ")[1]
                     ? video.snippet.title.split(" - ")[1]
                     : video.snippet.title;
 
-                    const path_ = 
-                    path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+                const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
-                    //Remove video from list
-                    if (fs.existsSync(path_))
-                        return;
-
+                //Remove video from list
+                if (fs.existsSync(path_)) {
+                    finished++
+                    updateLog()
+                    return;
                 }
 
-                let index = activeStreams.indexOf(undefined)
-                let Stream_ = new Stream(video, index);
-                activeStreams[index] = Stream_;
-                Stream_.Start();
-
             }
+
+            let index = streams.indexOf(undefined)
+            let Stream_ = new Stream(video, index);
+            streams[index] = Stream_;
+            Stream_.Start();
+
         }
 
     }

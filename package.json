@@ -18,7 +18,8 @@
     "fluent-ffmpeg": "^2.1.2",
     "lodash": "^4.17.15",
     "node-id3": "^0.1.13",
-    "reins_progress_bar": "github:LevitatingBusinessMan/progress_bar",
+    "reins_progress_bar": "^1.0.1",
+    "yt-playlists": "^1.0.0",
     "ytdl-core": "^1.0.6"
   },
   "keywords": [
