@@ -24,7 +24,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     //Logging errors
     if (os == "linux") {
         //let errorlines = 0
-        const err_wstream = fs.createWriteStream("/var/tmp/yt_mp3.stderr", {flags: "w"});
+        const err_wstream = fs.createWriteStream("/tmp/yt_mp3.stderr", {flags: "w"});
         console.error = (data) => {
             //process.stderr.moveCursor(0, streamCount+2 + errorlines)
             
@@ -165,7 +165,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
 
             console.error(`(${source}) Error at: ${this.title}\n${e}`);
             if (os == "linux")
-            console.log("Error logs at: /var/tmp/yt_mp3.stderr")
+            console.log("Error logs at: /tmp/yt_mp3.stderr")
 
             //Delete itself
             streams[this.index] = undefined;
