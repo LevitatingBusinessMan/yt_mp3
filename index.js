@@ -76,7 +76,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
             this.video = video;
             this.title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
             this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
-            this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "uknown";
+            this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "unknown";
             this.image = undefined;
             this.path = path.join(dir, this.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             this.size = undefined;
