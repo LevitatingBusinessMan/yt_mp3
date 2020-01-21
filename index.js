@@ -15,12 +15,6 @@ const hooks = {}
 //song_done
 //finish
 
-
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
 /**
  * 
  * @param {string} ID - ID of youtube playlist
@@ -115,8 +109,15 @@ module.exports = async (program) => {
                 }
                 let path_ = `${process.env.HOME}/.config/cmus/playlists/${dir}`;
                 
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });                
+                
                 const question = `\n\x1b[93mWhere to store the cmus playlist?\nIf you press enter I'll install to: ${path_}\n?) \x1b[0m`;
                 const answer = await (new Promise((resolve) => rl.question(question, resolve)))
+
+                rl.close()
 
                 //newline
                 console.log();
