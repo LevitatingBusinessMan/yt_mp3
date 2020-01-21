@@ -7,8 +7,19 @@ const ffmpeg = require("fluent-ffmpeg"),
     ytdl = require("ytdl-core"),
     ProgressBar = require("reins_progress_bar"),
     os = process.platform,
+    readline = require("readline"),
     {getVideos, getPlaylistInfo} = require("yt-playlists")("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
 
+//Hooks
+const hooks = {}
+//song_done
+//finish
+
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 /**
  * 
@@ -21,7 +32,14 @@ const ffmpeg = require("fluent-ffmpeg"),
  */
 module.exports = async (program) => {
 
-    let {ID, streams: streamCount, ID3, album, imageTag, overwrite} = program;
+    let {ID, streams: streamCount, ID3, album, imageTag, overwrite, playlist} = program;
+  
+    if (!ID) {
+        console.log("No playlist ID supplied");
+        process.exit(1);
+    }
+
+    let autostart = true;
 
     //Parse yt url
     if (ID.includes("list="))
@@ -45,9 +63,6 @@ module.exports = async (program) => {
     }
 
     ffmpeg.setFfmpegPath(ffmpeg_bin.path);
-
-    if (!ID)
-        return console.log("No playlist ID")
 
     //Retrieve playlists videos
     const PL = await getVideos(ID).catch(() => {
@@ -90,6 +105,37 @@ module.exports = async (program) => {
     if (PL.items.length - total > 0)
         console.log(`${PL.items.length - total} existing files found`)
     else console.log("No existing files found")
+
+    if (playlist)
+        switch (playlist) {
+            case "cmus":
+                if (os != "linux") {
+                    console.log("cmus playlist only supported on linux!");
+                    process.exit(1);
+                }
+                let path_ = `${process.env.HOME}/.config/cmus/playlists/${dir}`;
+                
+                const question = `\n\x1b[93mWhere to store the cmus playlist?\nIf you press enter I'll install to: ${path_}\n?) \x1b[0m`;
+                const answer = await (new Promise((resolve) => rl.question(question, resolve)))
+
+                //newline
+                console.log();
+
+                //Just pressed enter
+                if (answer.length > 2) path_ = answer;
+
+                const wrStream = fs.createWriteStream(path_, {flags: "w"});
+
+                createHook("finish", () => console.log(`Made playlist at ${path_}`));
+                createHook("song_done", stream => {
+                    wrStream.write(stream.path + "\n");
+                });
+
+                break;
+            default:
+                console.log("Playlist type not supperted");
+                process.exit(1)
+        }
 
     require("draftlog").into(console)
     const draftLogs = new Array(streamCount);
@@ -172,6 +218,8 @@ module.exports = async (program) => {
             finished++;
             updateLog();
 
+            hooks.song_done.forEach(fn => fn(this))
+
             //Delete itself
             streams[this.index] = undefined;
             delete this;
@@ -216,12 +264,15 @@ module.exports = async (program) => {
         ActiveStreamsCount = streams.filter(element => element).length;
 
         if (!videos.length && ActiveStreamsCount < 1){
+
+            hooks.finish.forEach(fn => fn())
+
             if (failed.length) {
                 console.log("\nFinished download. Failed songs:");
                 console.log(failed);
                 process.exit(1);
             } else {
-                console.log("\n Downloaded all songs succesfully");
+                console.log("\nDownloaded all songs succesfully");
                 process.exit(0);
             }
 
@@ -245,3 +296,9 @@ module.exports = async (program) => {
     setInterval(checkStreams, 100)
 
 };
+
+function createHook(name, fn) {
+    if (!hooks[name])
+        hooks[name] = [fn]
+    else hooks[name].push(fn);
+}
