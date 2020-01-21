@@ -17,9 +17,7 @@ Options:
   --no-overwrite          disable overwriting existing files
   -h, --help              output usage information
 ```
-The playlist ID can be found in the url of a playlist, example:
-https://www.youtube.com/playlist?list=PLc1l1_YXYDH4BoWto9Mds2aaL_bn1lAG_
-The ID is: `PLc1l1_YXYDH4BoWto9Mds2aaL_bn1lAG_`
+The ID supplied might either be a direct playlist ID or a link to a playlist.
 
 The streams option defaults to 15, this can be extremely CPU heavy as each download stream has to be converted to mp3.
 

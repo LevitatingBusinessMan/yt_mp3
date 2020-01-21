@@ -19,7 +19,13 @@ const ffmpeg = require("fluent-ffmpeg"),
  * @param {boolean} imageTag - If an image should be included in the ID3 tags
  * @param {boolean} overwrite - If existing files should be overwritten
  */
-module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
+module.exports = async (program) => {
+
+    let {ID, streams: streamCount, ID3, album, imageTag, overwrite} = program;
+
+    //Parse yt url
+    if (ID.includes("list="))
+        ID = ID.split("list=")[1]
 
     //Logging errors
     if (os == "linux") {
@@ -60,7 +66,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     let failed = new Array();
     let videos = PL.items;
     let finished = 0;
-    const streams = new Array(parseInt(streamCount)).fill(undefined);
+    let streams = new Array(parseInt(streamCount)).fill(undefined);
 
     //console.log(videos[0])
 
