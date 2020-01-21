@@ -57,11 +57,33 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
     if (!fs.existsSync(dir))
         fs.mkdirSync(dir);
 
-    const total = PL.items.length;
     let failed = new Array();
-    const videos = PL.items;
+    let videos = PL.items;
     let finished = 0;
     const streams = new Array(parseInt(streamCount)).fill(undefined);
+
+    //console.log(videos[0])
+
+    //Check if mp3 already exists
+    console.log("Checking for existing files...")
+    if (!overwrite) videos = videos.filter(video => {
+
+        const title = video.snippet.title
+
+        const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+
+        if (fs.existsSync(path_))
+            console.log(title)
+        //Filter out if it exists
+        return !fs.existsSync(path_)
+
+    })
+
+    const total = videos.length;
+    
+    if (PL.items.length - total > 0)
+        console.log(`${PL.items.length - total} existing files found`)
+    else console.log("No existing files found")
 
     require("draftlog").into(console)
     const draftLogs = new Array(streamCount);
@@ -78,7 +100,7 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
             this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
             this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "unknown";
             this.image = undefined;
-            this.path = path.join(dir, this.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.path = path.join(dir, video.snippet.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             this.size = undefined;
             this.PB = undefined;
             
@@ -203,24 +225,6 @@ module.exports = async (ID, streamCount, ID3, album, imageTag, overwrite) => {
         if (videos.length && ActiveStreamsCount < streamCount) {
 
             const video = videos.shift();
-
-            //Check if file exists
-            if (!overwrite) {
-                const title =
-                    video.snippet.title.split(" - ")[1]
-                    ? video.snippet.title.split(" - ")[1]
-                    : video.snippet.title;
-
-                const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
-
-                //Remove video from list
-                if (fs.existsSync(path_)) {
-                    finished++
-                    updateLog()
-                    return;
-                }
-
-            }
 
             let index = streams.indexOf(undefined)
             let Stream_ = new Stream(video, index);
