@@ -128,7 +128,6 @@ module.exports = async (program) => {
 
                 createHook("finish", () => console.log(`Made playlist at ${path_}`));
                 createHook("song_done", stream => {
-                    console.log(stream.path)
                     wrStream.write(stream.path + "\n");
                 });
 
