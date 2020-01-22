@@ -11,9 +11,10 @@ const ffmpeg = require("fluent-ffmpeg"),
     {getVideos, getPlaylistInfo} = require("yt-playlists")("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
 
 //Hooks
-const hooks = {}
-//song_done
-//finish
+const hooks = {
+    finish: [],
+    song_done: []
+}
 
 /**
  * 
