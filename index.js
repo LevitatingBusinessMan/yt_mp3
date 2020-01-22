@@ -128,6 +128,7 @@ module.exports = async (program) => {
 
                 createHook("finish", () => console.log(`Made playlist at ${path_}`));
                 createHook("song_done", stream => {
+                    console.log(stream.path)
                     wrStream.write(stream.path + "\n");
                 });
 
@@ -152,7 +153,7 @@ module.exports = async (program) => {
             this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
             this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "unknown";
             this.image = undefined;
-            this.path = path.join(dir, video.snippet.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.path = path.join(__dirname, dir, video.snippet.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             this.size = undefined;
             this.PB = undefined;
             
