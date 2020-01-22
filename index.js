@@ -40,6 +40,9 @@ module.exports = async (program) => {
     if (ID.includes("list="))
         ID = ID.split("list=")[1]
 
+    //Make sure streamcount is an int
+    streamCount = parseInt(streamCount)
+
     //Logging errors
     if (os == "linux") {
         //let errorlines = 0
@@ -78,26 +81,31 @@ module.exports = async (program) => {
     let finished = 0;
     let streams = new Array(parseInt(streamCount)).fill(undefined);
 
-    //console.log(videos[0])
-
     //Check if mp3 already exists
-    console.log("Checking for existing files...")
-    if (!overwrite) videos = videos.filter(video => {
+    const skippedByOverwrite = [];
+    if (!overwrite) {
+        console.log("Checking for existing files...")
 
-        const title = video.snippet.title
+        videos = videos.filter(video => {
 
-        const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            const title = video.snippet.title
 
-        //Filter out if it exists
-        return !fs.existsSync(path_)
+            const path_ = path.join(process.cwd(), dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
-    })
+            if (fs.existsSync(path_)) {
+                skippedByOverwrite.push(path_)
+                return false
+            } else return true
+
+        })
+
+        if (PL.items.length - videos.length > 0)
+            console.log(`${PL.items.length - videos.length} existing files found`)
+        else console.log("No existing files found")
+
+    }
 
     const total = videos.length;
-    
-    if (PL.items.length - total > 0)
-        console.log(`${PL.items.length - total} existing files found`)
-    else console.log("No existing files found")
 
     if (playlist)
         switch (playlist) {
@@ -124,7 +132,12 @@ module.exports = async (program) => {
                 //Just pressed enter
                 if (answer.length > 2) path_ = answer;
 
-                const wrStream = fs.createWriteStream(path_, {flags: "w"});
+                const wrStream = await (new Promise((resolve) => 
+                    fs.createWriteStream(path_, {flags: "w"})
+                    .on("ready", function () {resolve(this)})
+                ))
+
+                wrStream.write(skippedByOverwrite.join("\n"))
 
                 createHook("finish", () => console.log(`Made playlist at ${path_}`));
                 createHook("song_done", stream => {
@@ -152,7 +165,7 @@ module.exports = async (program) => {
             this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
             this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "unknown";
             this.image = undefined;
-            this.path = path.join(__dirname, dir, video.snippet.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.path = path.join(process.cwd(), dir, video.snippet.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             this.size = undefined;
             this.PB = undefined;
             
