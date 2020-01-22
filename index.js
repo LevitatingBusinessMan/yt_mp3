@@ -87,8 +87,6 @@ module.exports = async (program) => {
 
         const path_ = path.join(dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
-        if (fs.existsSync(path_))
-            console.log(title)
         //Filter out if it exists
         return !fs.existsSync(path_)
 
