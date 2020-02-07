@@ -8,7 +8,7 @@ const ffmpeg = require("fluent-ffmpeg"),
     ProgressBar = require("reins_progress_bar"),
     os = process.platform,
     readline = require("readline"),
-    {getVideos, getPlaylistInfo} = require("yt-playlists")("AIzaSyAueEP0JLjzPSBcIxZYP6kmHFHYMFXkf5E");
+    yt_playlists = require("yt-playlists");
 
 //Hooks
 const hooks = {
@@ -25,7 +25,9 @@ const hooks = {
  * @param {boolean} imageTag - If an image should be included in the ID3 tags
  * @param {boolean} overwrite - If existing files should be overwritten
  */
-module.exports = async (program) => {
+module.exports = async (program, key) => {
+
+    const {getVideos, getPlaylistInfo} = yt_playlists(key);
 
     let {ID, streams: streamCount, ID3, album, imageTag, overwrite, playlist} = program;
   
