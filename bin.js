@@ -38,5 +38,5 @@ const key = fs.readFileSync("./credentials").toString();
 if (!key) {
     console.log("Missing API key! Please set an api key with the --key flag")
 }
-    
+
 require("./index.js")(program, key);

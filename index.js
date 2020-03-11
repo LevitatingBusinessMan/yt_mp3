@@ -22,14 +22,14 @@ const hooks = {
  * @param {integer} streamCount - Number of streams allowed
  * @param {boolean} ID3 - If ID3 tags should be applied to mp3 files
  * @param {string} album - Name of album and directory
- * @param {boolean} imageTag - If an image should be included in the ID3 tags
+ * @param {boolean} image - If an image should be included in the ID3 tags
  * @param {boolean} overwrite - If existing files should be overwritten
  */
 module.exports = async (program, key) => {
 
     const {getVideos, getPlaylistInfo} = yt_playlists(key);
 
-    let {ID, streams: streamCount, ID3, album, imageTag, overwrite, playlist} = program;
+    let {ID, streams: streamCount, ID3, album, image, overwrite, playlist} = program;
   
     if (!ID) {
         console.log("No playlist ID supplied");
@@ -171,7 +171,7 @@ module.exports = async (program, key) => {
             this.size = undefined;
             this.PB = undefined;
             
-            if (imageTag) {
+            if (image) {
                 axios.get(video.snippet.thumbnails.best.url , {
                     responseType: "arraybuffer"
                 })
