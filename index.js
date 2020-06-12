@@ -220,7 +220,7 @@ module.exports = async (program, key) => {
                     title: this.title,
                     artist: this.artist,
                     image: this.image,
-                    trackNumber: playlistData.videos.indexOf(this.video),
+                    trackNumber: this.index,
                     album: dir
                 }, this.path, () => this.Finish());
             else this.Finish();
