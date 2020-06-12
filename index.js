@@ -8,7 +8,7 @@ const ffmpeg = require("fluent-ffmpeg"),
     ProgressBar = require("reins_progress_bar"),
     os = process.platform,
     readline = require("readline"),
-    yt_playlists = require("yt-playlists");
+    yt_playlists = require("yt-playlist-scraper");
 
 //Hooks
 const hooks = {
@@ -26,8 +26,6 @@ const hooks = {
  * @param {boolean} overwrite - If existing files should be overwritten
  */
 module.exports = async (program, key) => {
-
-    const {getVideos, getPlaylistInfo} = yt_playlists(key);
 
     let {ID, streams: streamCount, ID3, album, image, overwrite, playlist} = program;
   
@@ -64,22 +62,24 @@ module.exports = async (program, key) => {
 
     ffmpeg.setFfmpegPath(ffmpeg_bin.path);
 
+    console.log("Fetching videos")
+
     //Retrieve playlists videos
-    const PL = await getVideos(ID).catch(() => {
+    const playlistData = await yt_playlists(ID)
+    .catch(() => {
         console.error("Error retrieving playlist data");
         process.exit()
     });
-    await PL.items.fetchAll();
 
     //If no album name is set, use the playlists title
-    const dir = album ? album : (await getPlaylistInfo(ID)).snippet.title;
+    const dir = album ? album : playlistData.title;
 
     //Create folder
     if (!fs.existsSync(dir))
         fs.mkdirSync(dir);
 
     let failed = new Array();
-    let videos = PL.items;
+    let videos = playlistData.videos;
     let finished = 0;
     let streams = new Array(parseInt(streamCount)).fill(undefined);
 
@@ -90,7 +90,7 @@ module.exports = async (program, key) => {
 
         videos = videos.filter(video => {
 
-            const title = video.snippet.title
+            const title = video.title
 
             const path_ = path.join(process.cwd(), dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
@@ -101,8 +101,8 @@ module.exports = async (program, key) => {
 
         })
 
-        if (PL.items.length - videos.length > 0)
-            console.log(`${PL.items.length - videos.length} existing files found`)
+        if (playlistData.videos.length - videos.length > 0)
+            console.log(`${playlistData.videos.length - videos.length} existing files found`)
         else console.log("No existing files found")
 
     }
@@ -155,24 +155,21 @@ module.exports = async (program, key) => {
     require("draftlog").into(console)
     const draftLogs = new Array(streamCount);
 
-    /**
-     * @param {object} video - Video element from Youtube's API
-     */
     class Stream {
         constructor(video, index) {
             this.started = false;
             this.index = index;
             this.video = video;
-            this.title = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[1] : video.snippet.title;
+            this.title = video.title.split(" - ")[1] ? video.title.split(" - ")[1] : video.title;
             this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
-            this.artist = video.snippet.title.split(" - ")[1] ? video.snippet.title.split(" - ")[0] : "unknown";
+            this.artist = video.title.split(" - ")[1] ? video.title.split(" - ")[0] : "unknown";
             this.image = undefined;
-            this.path = path.join(process.cwd(), dir, video.snippet.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.path = path.join(process.cwd(), dir, video.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             this.size = undefined;
             this.PB = undefined;
             
             if (image) {
-                axios.get(video.snippet.thumbnails.best.url , {
+                axios.get(video.thumbnails.best.url , {
                     responseType: "arraybuffer"
                 })
                 .then(results => this.image = results.data)
@@ -181,7 +178,7 @@ module.exports = async (program, key) => {
         }
 
         Start() {
-            this.ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + this.video.snippet.resourceId.videoId, { filter: "audioonly", quality: "highestaudio" })
+            this.ytdl_stream = ytdl("http://www.youtube.com/watch?v=" + this.video.id, { filter: "audioonly", quality: "highestaudio" })
                 .on("progress", this.progressHandler.bind(this))
                 .on("error", e => this.Error(e, "ytdl"));
 
@@ -223,7 +220,7 @@ module.exports = async (program, key) => {
                     title: this.title,
                     artist: this.artist,
                     image: this.image,
-                    trackNumber: this.video.snippet.position +1,
+                    trackNumber: playlistData.videos.indexOf(this.video),
                     album: dir
                 }, this.path, () => this.Finish());
             else this.Finish();
