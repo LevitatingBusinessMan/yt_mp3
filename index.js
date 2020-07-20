@@ -25,9 +25,9 @@ const hooks = {
  * @param {boolean} image - If an image should be included in the ID3 tags
  * @param {boolean} overwrite - If existing files should be overwritten
  */
-module.exports = async (program, key) => {
+module.exports = async (options) => {
 
-    let {ID, streams: streamCount, ID3, album, image, overwrite, playlist} = program;
+    let {ID, streams: streamCount, ID3, album, image, overwrite, playlist} = options;
   
     if (!ID) {
         console.log("No playlist ID supplied");
@@ -159,6 +159,7 @@ module.exports = async (program, key) => {
         constructor(video, index) {
             this.started = false;
             this.index = index;
+            this.trackNumber = video.index;
             this.video = video;
             this.title = video.title.split(" - ")[1] ? video.title.split(" - ")[1] : video.title;
             this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
@@ -222,7 +223,7 @@ module.exports = async (program, key) => {
                     title: this.title,
                     artist: this.artist,
                     image: this.image,
-                    trackNumber: this.index,
+                    trackNumber: this.trackNumber,
                     album: dir
                 }, this.path, () => this.Finish());
             else this.Finish();
