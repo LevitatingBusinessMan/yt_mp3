@@ -168,6 +168,8 @@ module.exports = async (program, key) => {
             this.size = undefined;
             this.PB = undefined;
             
+            this.title.replace("(lyrics)", "");
+
             if (image) {
                 axios.get(video.thumbnails.best.url , {
                     responseType: "arraybuffer"
