@@ -16,6 +16,17 @@ const hooks = {
     song_done: []
 }
 
+//Filtered strings (these get removed from titles)
+const filter = [
+    "(lyrics)",
+    "(official audio)",
+    "(official video)",
+    "[lyrics]",
+    "(official lyric video)",
+    "(lyric video)",
+    "[lyric video]"
+]
+
 /**
  * 
  * @param {string} ID - ID of youtube playlist
@@ -162,21 +173,27 @@ module.exports = async (options) => {
             this.trackNumber = video.index;
             this.video = video;
             this.title = video.title.split(" - ")[1] ? video.title.split(" - ")[1] : video.title;
-            this.title_ = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
-            this.artist = video.title.split(" - ")[1] ? video.title.split(" - ")[0] : "unknown";
+            
+            // run filter on
+            filter.forEach(string => {
+                let string_escaped = string.replace(/[\(\[\)\]]/g, "\\$&");
+                const regex = new RegExp(string_escaped, "gi");
+                this.title = this.title.replace(regex, "").replace(/\s\s+/, "");
+            })
+
+            this.displaytitle = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
+            this.artist = video.title.split(" - ")[1] ? video.title.split(" - ")[0] : this.video.channel.title;
             this.image = undefined;
-            this.path = path.join(process.cwd(), dir, video.title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.path = path.join(process.cwd(), dir, (this.artist != "unknown" ? `${this.artist} - ${this.title}` : this.title).replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
             this.size = undefined;
             this.PB = undefined;
-            
-            this.title.replace("(lyrics)", "");
 
             if (image) {
                 axios.get(video.thumbnails.best.url , {
                     responseType: "arraybuffer"
                 })
                 .then(results => this.image = results.data)
-                .catch(e => this.error(e, "image-buffer-request"));
+                .catch(e => this.Error(e, "image-buffer-request"));
             }
         }
 
@@ -210,9 +227,9 @@ module.exports = async (options) => {
             this.PB.done = downloaded;
             
             if(!draftLogs[this.index])
-                draftLogs[this.index] = console.draft(`${this.title_ + " ".repeat(30-this.title_.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
+                draftLogs[this.index] = console.draft(`${this.displaytitle + " ".repeat(30-this.displaytitle.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
             else
-                draftLogs[this.index](`${this.title_ + " ".repeat(30-this.title_.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
+                draftLogs[this.index](`${this.displaytitle + " ".repeat(30-this.displaytitle.length)} ${this.PB.display()} ${this.PB.percentage()}%`);
         }
 
         WriteID3() {
