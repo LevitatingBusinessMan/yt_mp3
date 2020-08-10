@@ -9,7 +9,7 @@ const ffmpeg = require("fluent-ffmpeg"),
     os = process.platform,
     readline = require("readline"),
     yt_playlists = require("yt-playlist-scraper");
-    os = require("os")
+    os = require("os");
 
 //Hooks
 const hooks = {
@@ -58,7 +58,7 @@ module.exports = async (options) => {
     //Logging errors
     if (os == "linux") {
         //let errorlines = 0
-        let username = os.userInfo().username
+        const username = os.userInfo().username
         const err_wstream = fs.createWriteStream(`/tmp/yt_mp3_${username}.stderr`, {flags: "w"});
         console.error = (data) => {
             //process.stderr.moveCursor(0, streamCount+2 + errorlines)
