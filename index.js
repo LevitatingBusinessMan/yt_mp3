@@ -33,13 +33,12 @@ const filter = [
  * @param {string} ID - ID of youtube playlist
  * @param {integer} streamCount - Number of streams allowed
  * @param {boolean} ID3 - If ID3 tags should be applied to mp3 files
- * @param {string} album - Name of album and directory
  * @param {boolean} image - If an image should be included in the ID3 tags
  * @param {boolean} overwrite - If existing files should be overwritten
  */
 module.exports = async (options) => {
 
-    let {ID, streams: streamCount, ID3, album, image, overwrite, playlist} = options;
+    let {ID, streams: streamCount, ID3, image, overwrite, album, output, m3u} = options;
   
     if (!ID) {
         console.log("No playlist ID supplied");
@@ -55,26 +54,17 @@ module.exports = async (options) => {
     //Make sure streamcount is an int
     streamCount = parseInt(streamCount)
 
-    //Logging errors
-    if (os == "linux") {
-        //let errorlines = 0
-        const err_wstream = fs.createWriteStream(`/tmp/yt_mp3_${username}.stderr`, {flags: "w"});
-        console.error = (data) => {
-            //process.stderr.moveCursor(0, streamCount+2 + errorlines)
-            
-            process.stderr.write(data + "\n");
-            err_wstream.write(data + "\n");
+    let errorstrings = ""
+    let exit_code = 0
 
-            //Count lines that have been printed (assuming there's no wrap, wrap fucks this whole thing up)
-            //errorlines = errorlines + (data.match(/\n/g)||[]).length + 1
-
-            //process.stderr.moveCursor(0, -(streamCount+2) - errorlines)
-        }
-    }
+    createHook("error", (source, video, error) => {
+        error = `(${source}) Error at: ${video.title}\n${error}\n`
+        errorstrings += error;
+    })
 
     ffmpeg.setFfmpegPath(ffmpeg_bin.path);
 
-    console.log("Fetching videos")
+    console.log("Fetching videos...")
 
     //Retrieve playlists videos
     const playlistData = await yt_playlists(ID)
@@ -84,11 +74,15 @@ module.exports = async (options) => {
     });
 
     //If no album name is set, use the playlists title
-    const dir = album ? album : playlistData.title;
+    const plName = playlistData.title
+    let outputDir = output || plName
 
-    //Create folder
-    if (!fs.existsSync(dir))
-        fs.mkdirSync(dir);
+    //If the user specifies a non-existent dir, use that dir
+    //If the user specifies an existing dir, make a dir with inside with the playlist name
+    if (fs.existsSync(outputDir) && plName != outputDir) outputDir = path.join(outputDir, plName)
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir)
+
+    console.log(`Creating playlist at ${outputDir}`)
 
     let failed = new Array();
     let videos = playlistData.videos;
@@ -104,7 +98,7 @@ module.exports = async (options) => {
 
             const title = video.title
 
-            const path_ = path.join(process.cwd(), dir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            const path_ = path.join(outputDir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
 
             if (fs.existsSync(path_)) {
                 skippedByOverwrite.push(path_)
@@ -121,48 +115,23 @@ module.exports = async (options) => {
 
     const total = videos.length;
 
-    if (playlist)
-        switch (playlist) {
-            case "cmus":
-                if (os != "linux") {
-                    console.log("cmus playlist only supported on linux!");
-                    process.exit(1);
-                }
-                let path_ = `${process.env.HOME}/.config/cmus/playlists/${dir}`;
-                
-                const rl = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });                
-                
-                const question = `\n\x1b[93mWhere to store the cmus playlist?\nIf you press enter I'll install to: ${path_}\n?) \x1b[0m`;
-                const answer = await (new Promise((resolve) => rl.question(question, resolve)))
+    if (m3u) {
 
-                rl.close()
+        file = `${outputDir}/${plName}.m3u`
 
-                //newline
-                console.log();
+        const wrStream = await (new Promise((resolve) => 
+            fs.createWriteStream(file, {flags: "w"})
+            .on("ready", function () {resolve(this)})
+        ))
 
-                //Just pressed enter
-                if (answer.length > 2) path_ = answer;
+        wrStream.write(skippedByOverwrite.join("\n"))
 
-                const wrStream = await (new Promise((resolve) => 
-                    fs.createWriteStream(path_, {flags: "w"})
-                    .on("ready", function () {resolve(this)})
-                ))
+        createHook("finish", () => console.log(`Saved playlist in ${file}`));
+        createHook("song_done", stream => {
+            wrStream.write(stream.filename + "\n");
+        });
 
-                wrStream.write(skippedByOverwrite.join("\n"))
-
-                createHook("finish", () => console.log(`Made playlist at ${path_}`));
-                createHook("song_done", stream => {
-                    wrStream.write(stream.path + "\n");
-                });
-
-                break;
-            default:
-                console.log("Playlist type not supperted");
-                process.exit(1)
-        }
+    }
 
     require("draftlog").into(console)
     const draftLogs = new Array(streamCount);
@@ -185,9 +154,22 @@ module.exports = async (options) => {
             this.displaytitle = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
             this.artist = video.title.split(" - ")[1] ? video.title.split(" - ")[0] : this.video.channel.title;
             this.image = undefined;
-            this.path = path.join(process.cwd(), dir, (this.artist != "unknown" ? `${this.artist} - ${this.title}` : this.title).replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            this.filename = (this.artist != "unknown" ? `${this.artist} - ${this.title}` : this.title).replace(/[/\\?%*:|"<>]/g, "#") + ".mp3"
+            this.path = path.join(outputDir, this.filename);
             this.size = undefined;
             this.PB = undefined;
+
+            switch (album) {
+                case "playlist":
+                    this.album = plName
+                    break
+                case "channel":
+                    this.album = this.video.channel.title
+                    break
+                case "none":
+                default:
+                    this.album = undefined
+            }
 
             if (image) {
                 axios.get(video.thumbnails.best.url , {
@@ -242,7 +224,7 @@ module.exports = async (options) => {
                     artist: this.artist,
                     image: this.image,
                     trackNumber: this.trackNumber,
-                    album: dir
+                    album: this.album
                 }, this.path, () => this.Finish());
             else this.Finish();
         }
@@ -272,9 +254,7 @@ module.exports = async (options) => {
                 
             }
 
-            console.error(`(${source}) Error at: ${this.title}\n${e}`);
-            if (os == "linux")
-            console.log(`Error logs at: /tmp/yt_mp3_${username}.stderr`)
+            hooks.error.forEach(fn => fn(source, this, e))
 
             //Delete itself
             streams[this.index] = undefined;
@@ -299,15 +279,14 @@ module.exports = async (options) => {
         if (!videos.length && ActiveStreamsCount < 1){
 
             hooks.finish.forEach(fn => fn())
-
-            if (failed.length) {
-                console.log("\nFinished download. Failed songs:");
-                console.log(failed);
-                process.exit(1);
-            } else {
-                console.log("\nDownloaded all songs succesfully");
-                process.exit(0);
+            
+            if (errorstrings.length) {
+                exit_code = 1
+                console.error(errorstrings)
             }
+
+            console.log("Done downloading songs")
+            process.exit(exit_code)
 
         }
 

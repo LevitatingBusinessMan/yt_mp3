@@ -9,11 +9,12 @@ program
     .usage("[options] <ID>")
     .arguments("<ID>")
     .option("-s, --streams <amount>","amount of download streams", 15)
-    .option("-a, --album <name>","specify album name (default is playlist name)")
+    .option("-o, --output <dir>","Specify folder to place playlist in")
+    .option("-a, --album <name>","Specify album name. Options: none, playlist, channel")
     .option("--no-image","disable ablum covers (thumbnails)")
     .option("--no-ID3","disable ID3 tags")
+    .option("--no-m3u","don't create m3u file")
     .option("--no-overwrite","disable overwriting existing files")
-    .option("--playlist <type>", "Create playlist for certain media players. Currently supported: cmus")
     .action(function (id) {
         this.ID = id;
     })
