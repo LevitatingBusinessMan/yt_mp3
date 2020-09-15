@@ -14,7 +14,7 @@
     "axios": "^0.18.1",
     "commander": "^2.20.0",
     "draftlog": "^1.0.12",
-    "ffmpeg-static": "^4.2.7",
+    "ffmpeg-static": "^2.7.0",
     "fluent-ffmpeg": "^2.1.2",
     "lodash": "^4.17.20",
     "node-id3": "^0.1.18",

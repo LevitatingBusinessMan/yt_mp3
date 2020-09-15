@@ -54,7 +54,7 @@ module.exports = async (options) => {
     //Make sure streamcount is an int
     streamCount = parseInt(streamCount)
 
-    ffmpeg.setFfmpegPath(ffmpeg_bin);
+    ffmpeg.setFfmpegPath(ffmpeg_bin.path);
 
     console.log("Fetching videos...")
 
