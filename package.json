@@ -1,6 +1,6 @@
 {
   "name": "yt_mp3_downloader",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "A node.js script that downloads Youtube playlists",
   "main": "index.js",
   "preferGlobal": true,
