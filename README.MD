@@ -6,16 +6,17 @@ This [NodeJS](https://nodejs.org) command allows you to download youtube playlis
 
 #### Usage
 ```
-Usage: yt_mp3 [options] <ID>
+Usage: bin [options] <ID>
 
 Options:
   -v, --version           output the version number
   -s, --streams <amount>  amount of download streams (default: 15)
-  -a, --album <name>      specify album name (default is playlist name)
+  -o, --output <dir>      Specify folder to place playlist in
+  -a, --album <name>      Specify album name. Options: none, playlist, channel
   --no-image              disable ablum covers (thumbnails)
   --no-ID3                disable ID3 tags
+  --no-m3u                don't create m3u file
   --no-overwrite          disable overwriting existing files
-  --playlist <type>       Create playlist for certain media players. Currently supported: cmus
   -h, --help              output usage information
 ```
 The ID supplied might either be a direct playlist ID or a link to a playlist.

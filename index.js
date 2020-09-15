@@ -9,7 +9,7 @@ const ffmpeg = require("fluent-ffmpeg"),
     os = process.platform,
     readline = require("readline"),
     yt_playlists = require("yt-playlist-scraper"),
-    username = require("os").userInfo().username
+    require("draftlog").into(console);
 
 //Hooks
 const hooks = {
@@ -54,15 +54,7 @@ module.exports = async (options) => {
     //Make sure streamcount is an int
     streamCount = parseInt(streamCount)
 
-    let errorstrings = ""
-    let exit_code = 0
-
-    createHook("error", (source, video, error) => {
-        error = `(${source}) Error at: ${video.title}\n${error}\n`
-        errorstrings += error;
-    })
-
-    ffmpeg.setFfmpegPath(ffmpeg_bin.path);
+    ffmpeg.setFfmpegPath(ffmpeg_bin);
 
     console.log("Fetching videos...")
 
@@ -77,9 +69,13 @@ module.exports = async (options) => {
     const plName = playlistData.title
     let outputDir = output || plName
 
+    //Remove slashes
+    raw_outputDir = outputDir
+    outputDir = outputDir.replace(/[\\/]/, "#");
+
     //If the user specifies a non-existent dir, use that dir
     //If the user specifies an existing dir, make a dir with inside with the playlist name
-    if (fs.existsSync(outputDir) && plName != outputDir) outputDir = path.join(outputDir, plName)
+    if (fs.existsSync(outputDir) && plName != raw_outputDir) outputDir = path.join(outputDir, plName)
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir)
 
     console.log(`Creating playlist at ${outputDir}`)
@@ -94,22 +90,41 @@ module.exports = async (options) => {
     if (!overwrite) {
         console.log("Checking for existing files...")
 
-        videos = videos.filter(video => {
+        videos = videos.map(async video => {
 
-            const title = video.title
+            const {filename} = parse_video_title(video)
+            const path_ = path.join(outputDir, filename);
 
-            const path_ = path.join(outputDir, title.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3");
+            if (!fs.existsSync(path_)) return video;
 
-            if (fs.existsSync(path_)) {
+            //If there is a ID3 tag with the title we assume the file to be valid
+            const valid = await (new Promise((resolve) => {
+                NodeID3.read(path_, (err, tags) => {
+                    if (err) throw err;
+                    resolve(tags.title ? true : false)
+                })
+            }))
+
+
+            if (!valid) {
                 skippedByOverwrite.push(path_)
-                return false
-            } else return true
-
+                return video
+            }
+            
+            return null
         })
+
+        videos = (await Promise.all(videos)).filter(vid => vid)
 
         if (playlistData.videos.length - videos.length > 0)
             console.log(`${playlistData.videos.length - videos.length} existing files found`)
         else console.log("No existing files found")
+
+        //Stupid ass helper function for async filtering
+        async function filter(arr, callback) {
+            const fail = Symbol()
+            return (await Promise.all(arr.map(async item => (await callback(item)) ? item : fail))).filter(i=>i!==fail)
+        }
 
     }
 
@@ -117,7 +132,7 @@ module.exports = async (options) => {
 
     if (m3u) {
 
-        file = `${outputDir}/${plName}.m3u`
+        file = `${outputDir}/${plName.replace(/[/\\?%*:|"<>]/g, "#")}.m3u`
 
         const wrStream = await (new Promise((resolve) => 
             fs.createWriteStream(file, {flags: "w"})
@@ -133,7 +148,17 @@ module.exports = async (options) => {
 
     }
 
-    require("draftlog").into(console)
+    let errorstrings = "";
+    let exit_code = 0;
+    let error_count = 0;
+    let errors_draft = console.draft("Errors: 0");
+    createHook("error", (source, video, error) => {
+        error_count++;
+        errors_draft(`Errors: ${error_count}`);
+        error = `(${source}) Error at: ${video.title}\n${error}\n`;
+        errorstrings += error;
+    })
+
     const draftLogs = new Array(streamCount);
 
     class Stream {
@@ -142,17 +167,13 @@ module.exports = async (options) => {
             this.index = index;
             this.trackNumber = video.index;
             this.video = video;
-            this.title = video.title.split(" - ")[1] ? video.title.split(" - ")[1] : video.title;
-            
-            // run filter on
-            filter.forEach(string => {
-                let string_escaped = string.replace(/[\(\[\)\]]/g, "\\$&");
-                const regex = new RegExp(string_escaped, "gi");
-                this.title = this.title.replace(regex, "").replace(/\s\s+/, "");
-            })
+
+            const {artist, title, filename} = parse_video_title(video);
+            this.artist = artist;
+            this.title = title;
+            this.filename = filename;
 
             this.displaytitle = this.title.length > 30 ? this.title.substr(0, 27) + "..." : this.title;
-            this.artist = video.title.split(" - ")[1] ? video.title.split(" - ")[0] : this.video.channel.title;
             this.image = undefined;
             this.filename = (this.artist != "unknown" ? `${this.artist} - ${this.title}` : this.title).replace(/[/\\?%*:|"<>]/g, "#") + ".mp3"
             this.path = path.join(outputDir, this.filename);
@@ -313,4 +334,20 @@ function createHook(name, fn) {
     if (!hooks[name])
         hooks[name] = [fn]
     else hooks[name].push(fn);
+}
+
+function parse_video_title(video) {
+    let title = video.title.includes(" - ") ? video.title.split(" - ")[1] : video.title
+    const artist = video.title.includes(" - ") ? video.title.split(" - ")[0] : video.channel.title
+    filter.forEach(string => {
+        let string_escaped = string.replace(/[\(\[\)\]]/g, "\\$&");
+        const regex = new RegExp(string_escaped, "gi");
+        title = title.replace(regex, "").replace(/\s\s+/, "");
+    })
+    const filename = `${artist} - ${title}`.replace(/[/\\?%*:|"<>]/g, "#") + ".mp3"
+    return {
+        title,
+        artist,
+        filename
+    }
 }
