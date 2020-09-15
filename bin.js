@@ -8,7 +8,7 @@ program
     .version(require("./package.json").version, "-v, --version")
     .usage("[options] <ID>")
     .arguments("<ID>")
-    .option("-s, --streams <amount>","amount of download streams", 15)
+    .option("-s, --streams <amount>","amount of download streams", 10)
     .option("-o, --output <dir>","Specify folder to place playlist in")
     .option("-a, --album <name>","Specify album name. Options: none, playlist, channel")
     .option("--no-image","disable ablum covers (thumbnails)")
