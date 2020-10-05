@@ -105,13 +105,12 @@ module.exports = async (options) => {
                 })
             }))
 
-
-            if (!valid) {
+            if (valid) {
                 skippedByOverwrite.push(path_)
-                return video
+                return null
             }
             
-            return null
+            return video
         })
 
         videos = (await Promise.all(videos)).filter(vid => vid)
@@ -119,12 +118,6 @@ module.exports = async (options) => {
         if (playlistData.videos.length - videos.length > 0)
             console.log(`${playlistData.videos.length - videos.length} existing files found`)
         else console.log("No existing files found")
-
-        //Stupid ass helper function for async filtering
-        async function filter(arr, callback) {
-            const fail = Symbol()
-            return (await Promise.all(arr.map(async item => (await callback(item)) ? item : fail))).filter(i=>i!==fail)
-        }
 
     }
 
