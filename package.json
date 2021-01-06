@@ -11,7 +11,7 @@
     "yt_mp3": "bin.js"
   },
   "dependencies": {
-    "axios": "^0.18.1",
+    "axios": "^0.21.1",
     "commander": "^2.20.0",
     "draftlog": "^1.0.12",
     "ffmpeg-static": "^2.7.0",
