@@ -16,11 +16,10 @@
     "draftlog": "^1.0.12",
     "ffmpeg-static": "^2.7.0",
     "fluent-ffmpeg": "^2.1.2",
-    "lodash": "^4.17.20",
-    "node-id3": "^0.1.18",
+    "node-id3": "^0.1.21",
     "reins_progress_bar": "^1.0.2",
-    "yt-playlist-scraper": "^1.0.2",
-    "ytdl-core": "^3.2.2"
+    "yt-playlist-scraper": "^1.1.0",
+    "ytdl-core": "^4.5.0"
   },
   "keywords": [
     "youtube",
